@@ -8,9 +8,6 @@ Name of the Resource Group where the Log Analytics Workspace will be deployed.
 .PARAMETER -WorkspaceName
 Log Analytics Workspace Name.
 
-.PARAMETER -WorkspaceNameSku
-The service tier of the workspace.
-
 #>
 
 param (
