@@ -24,7 +24,7 @@ foreach ($resourceGroup in $resourceGroups) {
     if (!$lockExists) {
         Write-Output "$resourceGroupName does not have a lock."
         # Only apply Resource Lock if the $applyResourceLock variable is set to $true
-        if ($applyResourceLock = $true) {
+        if ($applyResourceLock -eq $true) {
             Write-Output "Adding Resource Lock to Resource Group: $($resourceGroupName)"
             New-AzResourceLock -LockLevel CanNotDelete -LockNotes "Prevents accidental deletion of resource groups" -LockName "ResourceLock" -ResourceGroupName $resourceGroupName -force   
         }
