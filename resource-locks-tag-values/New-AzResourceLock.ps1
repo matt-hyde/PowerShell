@@ -1,38 +1,28 @@
-$resourceGroups = Get-AzResourceGroup # Gets all RG's. Alternatively, create an array of target RG's.
-$lockTagValue = "Production"
+$resourceGroups = Get-AzResourceGroup
+$searchTagValues = @("Production", "Prd", "Prod")
 $applyResourceLock = $true
 
-# Loop through each Resource Group in the subscription
 foreach ($resourceGroup in $resourceGroups) {
+    foreach ($tagValue in $searchTagValues) {
+        $tags = (Get-AzResourceGroup $resourceGroup.ResourceGroupName).Tags.Values
 
-    # Check if any Resource Group has tags with a value containing $lockTagValue
-    $tagExists = Get-AzResourceGroup -Name $resourceGroup.ResourceGroupName | Where-Object { $_.Tags.Values -contains $lockTagValue }
-
-    if (!$tagExists) {
-        Write-Output "No tags found for '$($resourceGroup.ResourceGroupName)' that match '$($lockTagValue)'. Continuing to next (if any..)"
-        Continue
-    }
-
-    # Set $resourceGroupName
-    $resourceGroupName = $tagExists.ResourceGroupName
-   
-    Write-Output "$($resourceGroupName) has a '$($lockTagValue)' tag applied. Checking to see if Resource Group already has a lock applied."
-
-    # Check if Resource Group already has a lock
-    $lockExists = Get-AzResourceLock -ResourceGroupName $resourceGroupName -AtScope
-
-    if (!$lockExists) {
-        Write-Output "$resourceGroupName does not have a lock."
-        # Only apply Resource Lock if the $applyResourceLock variable is set to $true
-        if ($applyResourceLock -eq $true) {
-            Write-Output "Adding Resource Lock to Resource Group: $($resourceGroupName)"
-            New-AzResourceLock -LockLevel CanNotDelete -LockNotes "Prevents accidental deletion of resource groups" -LockName "ResourceLock" -ResourceGroupName $resourceGroupName -force   
+        if ($tags -notcontains $tagValue) {
+            Write-Output "No '$tagValue' tag found in $($resourceGroup.ResourceGroupName), moving to the next"
+            continue
+        }
+        $locks = Get-AzResourceLock -ResourceGroupName $resourceGroup.ResourceGroupName -AtScope
+        if (!$locks) {
+            Write-Output "$($resourceGroup.ResourceGroupName) does not have a lock."
+            if ($applyResourceLock) {
+                Write-Output "Adding Resource Lock to Resource Group: $($resourceGroup.ResourceGroupName)"
+                New-AzResourceLock -LockLevel CanNotDelete -LockNotes "Prevents accidental deletion of resource groups" -LockName "ResourceLock" -ResourceGroupName $resourceGroup.ResourceGroupName -force
+            }
+            else {
+                Write-Output "Apply resource locks is set to false. No resource locks will be added." 
+            }
         }
         else {
-            Write-Output "Apply resource locks is set to false. No resource locks will be added."            
+            Write-Output "$($resourceGroup.ResourceGroupName) already has a Resource Lock applied."
         }
-    }
-    else {
-        Write-Output "$resourceGroupName already has a Resource Lock applied."
     }
 }
